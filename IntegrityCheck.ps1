@@ -11,6 +11,18 @@
 # Resource use is not high, but I would suggest running
 # daily or hourly as opposed to every minute.
 
+# Store the current date as 4 digit year, 2 digit month, and
+# two didgit day.  We will use this later to add to files
+# for preservation.
+$date = get-date -UFormat "%Y%m%d"
+
+# Check for existence of backup directory.
+# This will only fire if this is the script's first run
+# or the directory was deleted.
+if( -Not (test-path d:\old)){
+    mkdir d:\old
+}
+
 # Get the perevious results.
 $oldFiles = Import-csv 'd:\result.csv'
 
@@ -42,6 +54,17 @@ $newFiles | %{
         # The SecureAuth Backup Tool as the source, becasue the log source
         # can be guaranteed to be valid on any system running SecureAuth
         Write-EventLog -LogName "Application" -Source "SecureAuth Backup Tool" -EventId 666 -EntryType Warning -Message "$($currentPath), $($match),$($oldHash),$($currentHash)"
+
+        # After logging that there is a change, put the new web.config file
+        # in the D:\old directory and rename it to realm plus the realm number
+        # and append the date the file was stored.  Finished files should
+        # look like this: realm999_20190103.
+        $tmpStr = $currentPath.Split("\")
+        $rn = $tmpStr[2].TrimStart("SecureAuth")
+        $src = "d:\secureauth\secureauth" + $rn + "\web.config"
+        $dst = "d:\old\realm$rn$("_")$date"
+        Copy-Item -Path $src -Destination $dst
+        Write-Output "copyied $($src) to $($dst)"
     }
     # If we need a line by line comparison for script testing we can
     # enable the line below.
